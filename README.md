@@ -50,8 +50,8 @@ Do you find your school's website schedule a headache to read? This project aims
 ## Usage
 
 ### Windows
+In the project directory, run this command
 ```powershell
-# In the project directory, run this command
 python .\main.py
 ```
 Then follow the prompts.
