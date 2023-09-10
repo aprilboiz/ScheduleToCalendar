@@ -132,9 +132,8 @@ def import_schedule(school):
                 schedule_data = schedule.get_data(semester=semester, year=year)
 
             schedule_data = CalendarHelper.format(schedule_data)
-            # cal.create_calendar(calendar_name)
-            # cal.create_event(schedule_data, calendar_name)
-            print(schedule_data)
+            cal.create_calendar(calendar_name)
+            cal.create_event(schedule_data, calendar_name)
         finally:
             schedule.user.logout()
 
