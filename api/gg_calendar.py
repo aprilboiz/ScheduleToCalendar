@@ -1,6 +1,5 @@
 import json
 import os
-import os.path
 from typing import Dict, List, Literal, Union, Any
 
 from config import TIME_ZONE
