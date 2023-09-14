@@ -47,6 +47,8 @@ Do you find your school's website schedule a headache to read? This project aims
    pip install -r requirements.txt
    ```
 
+3. If you do not have any credentials to interact with Google APIs, please follow this [link](https://developers.google.com/workspace/guides/create-credentials#desktop-app) to create them. Note that the application type should be set to `'Desktop app'`.
+
 ## Usage
 
 ### Windows
