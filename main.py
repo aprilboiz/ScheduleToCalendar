@@ -33,13 +33,14 @@ Note:
 
 """
 
+import importlib
+import pkgutil
+
 import config
 from api.calendar_helper import CalendarHelper
 from api.gg_calendar import Calendar
-from PyInquirer import prompt
 from examples import custom_style_3
-import os
-import importlib
+from PyInquirer import prompt
 
 cal = Calendar()
 
@@ -63,20 +64,16 @@ def get_user_credentials():
 
 
 def get_school():
-    dir_name = "schools"
-    path = os.path.dirname(os.path.abspath(__file__))
-    directory_path = f"{path}/{dir_name}"
-    folder_names = [
-        folder
-        for folder in os.listdir(directory_path)
-        if os.path.isdir(os.path.join(directory_path, folder))
-    ]
+    package = importlib.import_module("schools")
+    subpackage_name = []
+    for _, name, _ in pkgutil.walk_packages(package.__path__):
+        subpackage_name.append(name)
 
     questions = {
         "type": "list",
         "name": "school",
         "message": "Your school:",
-        "choices": [name.upper() for name in folder_names],
+        "choices": [name.upper() for name in subpackage_name],
     }
     answers = prompt(questions, style=custom_style_3)
     return answers["school"].lower()
