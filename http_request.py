@@ -33,6 +33,10 @@ class HttpRequest:
         Returns:
             requests.Response: The response object containing the server's response to the request.
         """
+        if "headers" in kwargs.keys():
+            for k, v in kwargs["headers"].items():
+                self.headers[k] = v
+            kwargs.pop("headers")
         self.headers["host"] = parse_url(url).hostname
         return self.session.get(url=url, headers=self.headers, **kwargs)
 
