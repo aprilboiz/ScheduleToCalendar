@@ -56,6 +56,7 @@ class SGUSchedule(Schedule):
         """
         self.user = SGUAccount(username, password)
         self.semester = ""
+        self.lecturers = []
 
     @property
     def user_session(self) -> "HttpRequest":
@@ -83,12 +84,25 @@ class SGUSchedule(Schedule):
                     "start_period": subject[9],
                     "end_period": str(int(subject[9]) + int(subject[10])),
                     "room": subject[11],
-                    "lecturer": subject[12],
+                    "lecturer": self.get_lecturer_name_from_id(subject[12]),
                     "from_date": self.get_subject_date(subject)["from_date"],
                     "to_date": self.get_subject_date(subject)["to_date"],
                 }
             )
         return return_data
+
+    def get_lecturer_name_from_id(self, id: str) -> str:
+        if not self.lecturers:
+            res = self.user_session.get(
+                "https://tkb.huukhuongit.com/getAllLectures.php",
+                headers={"accept": "application/json"},
+            )
+            data = res.json()
+            self.lecturers = data
+        for d in self.lecturers:
+            if d["id"] == id:
+                return d["name"]
+        return ""
 
     def get_subject_date(self, subject) -> Dict[str, str]:
         """
