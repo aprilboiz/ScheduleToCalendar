@@ -7,6 +7,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from google.auth.exceptions import RefreshError
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
@@ -73,13 +74,26 @@ class Calendar:
         self.creds = None
         self.service = None
 
+        self.get_credentials()
+
+        # It literally returns the Resource object with Calendar's methods.
+        # Because the Resource object generates methods dynamically.
+        # So in this case, static type checking will not work as expected.
+        # Using the 'Any' type to compress any errors related to the Resource object.
+        self.service: Any = build("calendar", "v3", credentials=self.creds)
+
+    def get_credentials(self):
         # https://developers.google.com/calendar/api/quickstart/python
         if os.path.exists(self.token_path):
             self.creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
         # If there are no (valid) credentials available, let the user log in.
         if not self.creds or not self.creds.valid:
             if self.creds and self.creds.expired and self.creds.refresh_token:
-                self.creds.refresh(Request())
+                try:
+                    self.creds.refresh(Request())
+                except RefreshError:
+                    os.remove(self.token_path)
+                    self.get_credentials()
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     self.credentials_path, SCOPES
@@ -88,12 +102,6 @@ class Calendar:
             # Save the credentials for the next run
             with open(self.token_path, "w") as token:
                 token.write(self.creds.to_json())
-
-        # It literally returns the Resource object with Calendar's methods.
-        # Because the Resource object generates methods dynamically.
-        # So in this case, static type checking will not work as expected.
-        # Using the 'Any' type to compress any errors related to the Resource object.
-        self.service: Any = build("calendar", "v3", credentials=self.creds)
 
     def get(self, get_type: Literal["calendars", "events"], name: str = ""):
         """
