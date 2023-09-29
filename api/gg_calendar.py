@@ -92,7 +92,10 @@ class Calendar:
                 try:
                     self.creds.refresh(Request())
                 except RefreshError:
-                    os.remove(self.token_path)
+                    try:
+                        os.remove(self.token_path)
+                    except FileNotFoundError:
+                        pass
                     self.get_credentials()
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
