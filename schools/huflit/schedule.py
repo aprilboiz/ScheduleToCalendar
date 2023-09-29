@@ -169,7 +169,7 @@ class HUFLITSchedule(Schedule):
                 print(data[0][0])
                 return None
             else:
-                return self.standardization(data[2:])
+                return self.standardization(data)
         else:
             try:
                 self.user.login()
