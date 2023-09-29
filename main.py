@@ -29,7 +29,7 @@ Usage:
 Note:
     - The script assumes that school-specific modules are available in the 'schools' directory.
     - Google Calendar API credentials and configurations are not included in this script.
-    - Ensure that you have the necessary dependencies installed (e.g., PyInquirer).
+    - Ensure that you have the necessary dependencies installed (e.g., InquirerPy).
 
 """
 
@@ -39,8 +39,7 @@ import pkgutil
 import config
 from api.calendar_helper import CalendarHelper
 from api.gg_calendar import Calendar
-from examples import custom_style_3
-from PyInquirer import prompt
+from InquirerPy.resolver import prompt
 
 cal = Calendar()
 
@@ -59,7 +58,7 @@ def get_user_credentials():
             "message": "Password",
         },
     ]
-    answers = prompt(questions, style=custom_style_3)
+    answers = prompt(questions)
     return [answers["username"], answers["password"]]
 
 
@@ -75,8 +74,8 @@ def get_school():
         "message": "Your school:",
         "choices": [name.upper() for name in subpackage_name],
     }
-    answers = prompt(questions, style=custom_style_3)
-    return answers["school"].lower()
+    answers = prompt(questions)
+    return str(answers["school"]).lower()
 
 
 def get_semester(schedule):
@@ -92,7 +91,7 @@ def get_semester(schedule):
                 "choices": value,
             }
         )
-    answers = prompt(questions, style=custom_style_3)
+    answers = prompt(questions)
     for key in semesters.keys():
         data[key] = answers[key]
     return data
@@ -177,7 +176,7 @@ def main():
 
     print("SGU Schedule to Google Calendar by Tuan Anh Phan")
     school = get_school()
-    options = prompt(questions, style=custom_style_3)
+    options = prompt(questions)
     if options["mode"] == "Import":
         import_schedule(school)
     elif options["mode"] == "Update":
