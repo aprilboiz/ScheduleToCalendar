@@ -98,7 +98,7 @@ def get_semester(schedule):
 
 
 def import_school_module(name: str):
-    module = importlib.import_module(f"schools.{name}.schedule")
+    module = importlib.import_module(f"schools.{name.lower()}.schedule")
     schedule_class = getattr(module, f"{name.upper()}Schedule")
     return schedule_class
 
