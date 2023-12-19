@@ -1,6 +1,10 @@
-BASE_URL = "http://thongtindaotao.sgu.edu.vn"
-DEFAULT_ENDPOINT = "/default.aspx"
-SCHEDULE_ENDPOINT = "/default.aspx?page=thoikhoabieu&sta=1"
+BASE_URL = "https://thongtindaotao.sgu.edu.vn"
+DEFAULT_ENDPOINT = "/#/home"
+SCHEDULE_ENDPOINT = "/api/sch/w-locdstkbhockytheodoituong"
+LOGIN_ENDPOINT = "/api/auth/login"
+LOGOUT_ENDPOINT = "/api/auth/logout"
+SCHEDULE_LIST_ENDPOINT = "/api/sch/w-locdshockytkbuser"
+SCHEDULE_DETAIL_ENDPOINT = "/api/sch/w-locdstkbhockytheodoituong"
 
 CLASS_TIME = {
     "1": "07:00:00",
@@ -19,11 +23,12 @@ CLASS_TIME = {
 }
 
 WEEK_DAY = {
-    "Hai": 0,
-    "Ba": 1,
-    "Tư": 2,
-    "Năm": 3,
-    "Sáu": 4,
+    "2": 0,
+    "3": 1,
+    "4": 2,
+    "5": 3,
+    "6": 4,
+    "7": 5
 }
 
 SEMESTER_DATE = {
@@ -33,6 +38,7 @@ SEMESTER_DATE = {
     "20222": "06/02/2023",
     "20223": "26/06/2023",
     "20231": "04/09/2023",
+    "20232": "15/01/2024"
 }
 
 # time for one lesson, in minute

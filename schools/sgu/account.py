@@ -37,6 +37,9 @@ class SGUAccount(Account):
         self.password = password
         self.name = ""
 
+        self.token_type = ""
+        self.access_token = ""
+
     @property
     def session_id(self) -> str:
         """
@@ -60,28 +63,28 @@ class SGUAccount(Account):
         print("Logging in ...")
 
         payload = {
-            "__EVENTTARGET": "",
-            "__EVENTARGUMENT": "",
-            "ctl00$ContentPlaceHolder1$ctl00$ucDangNhap$txtTaiKhoa": f"{self.username}",
-            "ctl00$ContentPlaceHolder1$ctl00$ucDangNhap$txtMatKhau": f"{self.password}",
-            "ctl00$ContentPlaceHolder1$ctl00$ucDangNhap$btnDangNhap": "Đăng Nhập",
+            "username": self.username,
+            "password": self.password,
+            "grant_type": "password",
         }
+
         res = self.http.post(
-            url=constants.BASE_URL + constants.DEFAULT_ENDPOINT,
+            url=constants.BASE_URL + constants.LOGIN_ENDPOINT,
             data=payload,
         )
-        # after the login is successful, the page will be redirected to the home page
-        # we will accept this as a sign of successful authentication
-        if res.history:
-            # get user's name
-            soup = BeautifulSoup(res.text, "lxml")
-            find_name = soup.find("span", {"id": "ctl00_Header1_Logout1_lblNguoiDung"})
-            if find_name is not None:
-                self.name = find_name.text
 
+        res = res.json()
+
+        if int(res["code"]) == 200:
             self.logged_in = not self.logged_in
+            self.name = res["name"]
+
+            self.token_type = res["token_type"]
+            self.access_token = res["access_token"]
+            self.http.headers["Authorization"] = f"{self.token_type} {self.access_token}"
+
         else:
-            raise AuthenticationError("Login failed.")
+            raise AuthenticationError(res["message"])
 
     def logout(self):
         """
@@ -95,20 +98,13 @@ class SGUAccount(Account):
 
         print("Logging out ...")
 
-        payload = {
-            "__EVENTTARGET": "ctl00$Header1$Logout1$lbtnLogOut",
-            "__EVENTARGUMENT": "",
-        }
         res = self.http.post(
-            constants.BASE_URL + constants.DEFAULT_ENDPOINT,
-            data=payload,
+            constants.BASE_URL + constants.LOGOUT_ENDPOINT,
         )
-        # check if the user is logged out or not
-        res = self.http.get(constants.BASE_URL + constants.SCHEDULE_ENDPOINT)
 
-        # if there is history, it means the user was successfully logged out
-        # because of the redirect happened.
-        if res.history:
+        res = res.json()
+
+        if int(res["code"]) == 200:
             self.logged_in = not self.logged_in
         else:
             raise AuthenticationError("Logout failed. SessionID: " + self.session_id)

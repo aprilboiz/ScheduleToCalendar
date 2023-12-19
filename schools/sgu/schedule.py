@@ -76,33 +76,20 @@ class SGUSchedule(Schedule):
         for subject in subject_data:
             return_data.append(
                 {
-                    "code": subject[0],
-                    "name": subject[1],
-                    "credits": subject[3],
-                    "class": subject[4].split(", ")[0],
-                    "weekday": subject[8],
-                    "start_period": subject[9],
-                    "end_period": str(int(subject[9]) + int(subject[10])),
-                    "room": subject[11],
-                    "lecturer": self.get_lecturer_name_from_id(subject[12]),
+                    "code": subject['ma_mon'],
+                    "name": subject['ten_mon'],
+                    "credits": subject['so_tc'],
+                    "class": subject['lop'],
+                    "weekday": subject['thu'],
+                    "start_period": subject['tbd'],
+                    "end_period": str(int(subject['tbd']) + int(subject['so_tiet'])),
+                    "room": subject['phong'],
+                    "lecturer": subject['gv'],
                     "from_date": self.get_subject_date(subject)["from_date"],
                     "to_date": self.get_subject_date(subject)["to_date"],
                 }
             )
         return return_data
-
-    def get_lecturer_name_from_id(self, id: str) -> str:
-        if not self.lecturers:
-            res = self.user_session.get(
-                "https://tkb.huukhuongit.com/getAllLectures.php",
-                headers={"accept": "application/json"},
-            )
-            data = res.json()
-            self.lecturers = data
-        for d in self.lecturers:
-            if d["id"] == id:
-                return d["name"]
-        return ""
 
     def get_subject_date(self, subject) -> Dict[str, str]:
         """
@@ -115,25 +102,26 @@ class SGUSchedule(Schedule):
             Dict[str, str]: A dictionary containing 'from_date' and 'to_date'.
         """
         semester_start_date = constants.SEMESTER_DATE[self.semester]
-        weekday = constants.WEEK_DAY[subject[8]]
-        start_period_time = constants.CLASS_TIME[subject[9]]
-        period_count = int(subject[10])
+        weekday = constants.WEEK_DAY[str(subject['thu'])]
+        start_period_time = constants.CLASS_TIME[str(subject['tbd'])]
+        period_count = int(subject['so_tiet'])
 
         from_date = datetime.strptime(
             f"{semester_start_date} {start_period_time}", "%d/%m/%Y %H:%M:%S"
         )
-        to_date = from_date
-        to_date += timedelta(
-            days=7 * len(subject[13]) + weekday,
-            minutes=constants.LESSON_TIME * period_count,
-        )
 
-        for c in subject[13]:
+        for c in subject['tkb']:
             if c.isdigit():
                 break
             else:
                 from_date += timedelta(days=7)
         from_date += timedelta(days=weekday)
+
+        to_date = from_date
+        to_date += timedelta(
+            days=7 * len(subject['tkb'].replace("-", "")),
+            minutes=constants.LESSON_TIME * period_count,
+        )
 
         return {
             "from_date": from_date.isoformat(),
@@ -147,18 +135,16 @@ class SGUSchedule(Schedule):
         Returns:
             Dict[str, List[str]]: A dictionary containing 'semesters'.
         """
+        semesters = []
         if self.user.logged_in:
-            soup = BeautifulSoup(
-                self.user_session.get(
-                    constants.BASE_URL + constants.SCHEDULE_ENDPOINT
-                ).text,
-                "lxml",
-            )
-            result = soup.find(
-                "select", {"id": "ctl00_ContentPlaceHolder1_ctl00_ddlChonNHHK"}
-            )
-            semesters = result.find_all("option")  # type: ignore
-            return {"semesters": [semester.attrs["value"] for semester in semesters]}
+
+            res = self.user_session.post(constants.BASE_URL + constants.SCHEDULE_LIST_ENDPOINT)
+
+            if res.status_code == 200:
+                res = res.json()
+                semesters = res["data"]["ds_hoc_ky"]
+
+            return {"semesters": [semester["hoc_ky"] for semester in semesters]}
         else:
             raise AuthenticationError("User is not logged in.")
 
@@ -177,20 +163,6 @@ class SGUSchedule(Schedule):
             ValueError: If the provided semester is invalid.
         """
 
-        def get_viewstate():
-            soup = BeautifulSoup(
-                self.user_session.get(
-                    constants.BASE_URL + constants.SCHEDULE_ENDPOINT
-                ).text,
-                "lxml",
-            )
-            find_viewstate = soup.find("input", {"id": "__VIEWSTATE"})
-            return (
-                find_viewstate.attrs["value"]  # type: ignore
-                if find_viewstate is not None
-                else find_viewstate
-            )
-
         if self.user.logged_in:
             if not semester:
                 semester = self.get_semesters()["semesters"][0]
@@ -204,37 +176,26 @@ class SGUSchedule(Schedule):
                     raise ValueError(
                         f"The semester is invalid. It must be one of {available_semesters}"
                     )
-            self.semester = semester
+            self.semester = str(semester)
 
             data = []
             payload = {
-                "__EVENTTARGET": "ctl00$ContentPlaceHolder1$ctl00$rad_ThuTiet",
-                "__EVENTARGUMENT": "",
-                "__LASTFOCUS": "",
-                "__VIEWSTATE": get_viewstate(),
-                "ctl00$ContentPlaceHolder1$ctl00$ddlChonNHHK": semester,
-                "ctl00$ContentPlaceHolder1$ctl00$ddlLoai": "1",
-                "ctl00$ContentPlaceHolder1$ctl00$rad_ThuTiet": "rad_ThuTiet",
-                "ctl00$ContentPlaceHolder1$ctl00$rad_MonHoc": "rad_MonHoc",
+                "hoc_ky": self.semester,
+                "id_du_lieu": None,
+                "loai_doi_tuong": 1
             }
 
             response = self.user_session.post(
                 constants.BASE_URL + constants.SCHEDULE_ENDPOINT,
                 data=payload,
             )
-            # extract data from response
-            soup = BeautifulSoup(response.text, "lxml")
-            rows = soup.find_all("tr", {"height": "22px"})
 
-            # extract text from each row
-            for row in rows:
-                tmp_data = []
-                for td in row.find_all("td"):
-                    tmp_data.append(td.text)
-                data.append(tmp_data)
+            if response.status_code == 200:
+                res = response.json()
 
-            if len(data) == 0:
-                return None
+                # check if that semester has a schedule or not
+                if res['data']['total_items'] != 0:
+                    data = res['data']['ds_nhom_to']
 
             return self.standardization(data)
         else:
