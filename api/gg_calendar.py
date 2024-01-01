@@ -207,7 +207,6 @@ class Calendar:
                     "dateTime": f'{e["end_period_date"]}',
                     "timeZone": TIME_ZONE,
                 },
-                "recurrence": [f'RRULE:FREQ=WEEKLY;COUNT={e["repeat"]}'],
                 "colorId": f'{e["color"]}',
                 "reminders": {
                     "useDefault": False,
@@ -216,6 +215,11 @@ class Calendar:
                     ],
                 },
             }
+
+            # there is no need to repeat one-day events. For example: exam day
+            if e["repeat"] and int(e["repeat"]) > 0:
+                event["recurrence"] = [f'RRULE:FREQ=WEEKLY;COUNT={e["repeat"]}']
+
             result = (
                 self.service.events()
                 .insert(calendarId=self.get_calendar_id(name), body=event)
