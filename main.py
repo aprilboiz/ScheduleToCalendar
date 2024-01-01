@@ -166,6 +166,40 @@ def update_schedule(from_school):
         return
 
 
+def import_test_schedule(school="SGU"):
+    calendar_name = input(f"(Optional) Calendar name (default: {config.DEFAULT_TEST_NAME}):")
+
+    if not calendar_name:
+        calendar_name = config.DEFAULT_TEST_NAME
+
+    if cal.is_exist(calendar_name):
+        print("This calendar is already exists.")
+        return
+    else:
+        username, password = get_user_credentials()
+        schedule_class = import_school_module(school)
+        schedule = schedule_class(username, password)
+        try:
+            schedule.user.login()
+            result = get_semester(schedule)
+            if len(result) == 1:
+                semester = result["semesters"]
+                schedule_data = schedule.get_test_data(semester=semester)
+            else:
+                semester = result["semesters"]
+                year = result["years"]
+                schedule_data = schedule.get_test_data(semester=semester, year=year)
+
+            if schedule_data is not None:
+                schedule_data = CalendarHelper.format(schedule_data)
+                cal.create_calendar(calendar_name)
+                cal.create_event(schedule_data, calendar_name)
+            else:
+                print("This semester does not have any data!")
+        finally:
+            schedule.user.logout()
+
+
 def main():
     questions = {
         "type": "list",
@@ -176,6 +210,9 @@ def main():
 
     print("SGU Schedule to Google Calendar by Tuan Anh Phan")
     school = get_school()
+    if school.upper() == "SGU":
+        questions["choices"].append("Import test schedule")
+
     options = prompt(questions)
     if options["mode"] == "Import":
         import_schedule(school)
@@ -183,6 +220,8 @@ def main():
         update_schedule(school)
     elif options["mode"] == "Exit":
         exit()
+    elif options["mode"] == "Import test schedule":
+        import_test_schedule()
     else:
         print("This option is not available.")
 

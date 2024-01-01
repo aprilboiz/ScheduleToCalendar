@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Dict, List, Union
-from bs4 import BeautifulSoup
 from base.schedule import Schedule
 from exceptions import AuthenticationError
 from schools.sgu.account import SGUAccount
+import json
 
 from . import constants
 
@@ -62,7 +62,7 @@ class SGUSchedule(Schedule):
     def user_session(self) -> "HttpRequest":
         return self.user.http
 
-    def standardization(self, subject_data) -> List[Dict[str, str]]:
+    def standardization(self, subject_data, is_test=False) -> List[Dict[str, str]]:
         """
         Standardize the subject data extracted from the website.
 
@@ -73,22 +73,47 @@ class SGUSchedule(Schedule):
             List[Dict[str, str]]: The standardized subject data.
         """
         return_data = []
-        for subject in subject_data:
-            return_data.append(
-                {
-                    "code": subject['ma_mon'],
-                    "name": subject['ten_mon'],
-                    "credits": subject['so_tc'],
-                    "class": subject['lop'],
-                    "weekday": subject['thu'],
-                    "start_period": subject['tbd'],
-                    "end_period": str(int(subject['tbd']) + int(subject['so_tiet'])),
-                    "room": subject['phong'],
-                    "lecturer": subject['gv'],
-                    "from_date": self.get_subject_date(subject)["from_date"],
-                    "to_date": self.get_subject_date(subject)["to_date"],
-                }
-            )
+        if not is_test:
+            for subject in subject_data:
+                return_data.append(
+                    {
+                        "code": subject["ma_mon"],
+                        "name": subject["ten_mon"],
+                        "credits": subject["so_tc"],
+                        "class": subject["lop"],
+                        "weekday": subject["thu"],
+                        "start_period": subject["tbd"],
+                        "end_period": str(
+                            int(subject["tbd"]) + int(subject["so_tiet"])
+                        ),
+                        "room": subject["phong"],
+                        "lecturer": subject["gv"],
+                        "from_date": self.get_subject_date(subject)["from_date"],
+                        "to_date": self.get_subject_date(subject)["to_date"],
+                    }
+                )
+        else:
+            for subject in subject_data:
+                ngay_thi = subject["ngay_thi"]
+                gio_thi = subject["gio_bat_dau"]
+                so_phut = subject["so_phut"]
+
+                from_date = datetime.strptime(
+                    f"{ngay_thi} {gio_thi}:00", "%d/%m/%Y %H:%M:%S"
+                )
+                to_date = from_date + timedelta(minutes=int(so_phut))
+
+                return_data.append(
+                    {
+                        "code": subject["ma_mon"],
+                        "name": subject["ten_mon"],
+                        "day": subject["ngay_thi"],
+                        "room": subject["ma_phong"],
+                        "from_date": from_date.isoformat(),
+                        "to_date": to_date.isoformat(),
+                    }
+                )
+
         return return_data
 
     def get_subject_date(self, subject) -> Dict[str, str]:
@@ -102,15 +127,15 @@ class SGUSchedule(Schedule):
             Dict[str, str]: A dictionary containing 'from_date' and 'to_date'.
         """
         semester_start_date = constants.SEMESTER_DATE[self.semester]
-        weekday = constants.WEEK_DAY[str(subject['thu'])]
-        start_period_time = constants.CLASS_TIME[str(subject['tbd'])]
-        period_count = int(subject['so_tiet'])
+        weekday = constants.WEEK_DAY[str(subject["thu"])]
+        start_period_time = constants.CLASS_TIME[str(subject["tbd"])]
+        period_count = int(subject["so_tiet"])
 
         from_date = datetime.strptime(
             f"{semester_start_date} {start_period_time}", "%d/%m/%Y %H:%M:%S"
         )
 
-        for c in subject['tkb']:
+        for c in subject["tkb"]:
             if c.isdigit():
                 break
             else:
@@ -119,7 +144,7 @@ class SGUSchedule(Schedule):
 
         to_date = from_date
         to_date += timedelta(
-            days=7 * len(subject['tkb'].replace("-", "")),
+            days=7 * len(subject["tkb"].replace("-", "")),
             minutes=constants.LESSON_TIME * period_count,
         )
 
@@ -137,8 +162,9 @@ class SGUSchedule(Schedule):
         """
         semesters = []
         if self.user.logged_in:
-
-            res = self.user_session.post(constants.BASE_URL + constants.SCHEDULE_LIST_ENDPOINT)
+            res = self.user_session.post(
+                constants.BASE_URL + constants.SCHEDULE_LIST_ENDPOINT
+            )
 
             if res.status_code == 200:
                 res = res.json()
@@ -179,11 +205,7 @@ class SGUSchedule(Schedule):
             self.semester = str(semester)
 
             data = []
-            payload = {
-                "hoc_ky": self.semester,
-                "id_du_lieu": None,
-                "loai_doi_tuong": 1
-            }
+            payload = {"hoc_ky": self.semester, "id_du_lieu": None, "loai_doi_tuong": 1}
 
             response = self.user_session.post(
                 constants.BASE_URL + constants.SCHEDULE_ENDPOINT,
@@ -194,10 +216,80 @@ class SGUSchedule(Schedule):
                 res = response.json()
 
                 # check if that semester has a schedule or not
-                if res['data']['total_items'] != 0:
-                    data = res['data']['ds_nhom_to']
+                if res["data"]["total_items"] != 0:
+                    data = res["data"]["ds_nhom_to"]
 
             return self.standardization(data)
+        else:
+            try:
+                print("User is not logged in. Trying to login...")
+                self.user.login()
+                data = self.get_data(semester)
+                return data
+            finally:
+                self.user.logout()
+
+    def get_test_data(self, semester):
+        if self.user.logged_in:
+            if not semester:
+                semester = self.get_semesters()["semesters"][0]
+                print(
+                    "Semester not found. Class schedule will be taken from this semester:",
+                    semester,
+                )
+            else:
+                available_semesters = self.get_semesters()["semesters"]
+                if semester not in available_semesters:
+                    raise ValueError(
+                        f"The semester is invalid. It must be one of {available_semesters}"
+                    )
+            self.semester = str(semester)
+
+            data = []
+
+            headers = {
+                "content-type": "application/json",
+                "accept": "*/*"
+            }
+
+            payload = {
+                "filter": {
+                    "hoc_ky": self.semester
+                },
+                "additional": {
+                    "paging": {
+                        "limit": 100,
+                        "page": 1
+                    },
+                    "ordering": [
+                        {
+                            "name": None,
+                            "order_type": None
+                        }
+                    ],
+                },
+            }
+
+            response = self.user_session.post(
+                constants.BASE_URL + constants.TEST_SCHEDULE_ENDPOINT,
+                data=json.dumps(payload),
+                headers=headers
+            )
+
+            # this status code check just to know the request was succeed.
+            if response.status_code == 200:
+                res = response.json()
+                # this is the real status code check🤡
+                if res["code"] == 200:
+                    # check if that semester has a schedule or not
+                    if res["data"]["total_items"] != 0:
+                        data = res["data"]["ds_lich_thi"]
+                    else:
+                        return None
+                else:
+                    raise Exception(res["message"])
+
+            return self.standardization(data, is_test=True)
         else:
             try:
                 print("User is not logged in. Trying to login...")

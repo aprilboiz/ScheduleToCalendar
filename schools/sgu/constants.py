@@ -5,6 +5,7 @@ LOGIN_ENDPOINT = "/api/auth/login"
 LOGOUT_ENDPOINT = "/api/auth/logout"
 SCHEDULE_LIST_ENDPOINT = "/api/sch/w-locdshockytkbuser"
 SCHEDULE_DETAIL_ENDPOINT = "/api/sch/w-locdstkbhockytheodoituong"
+TEST_SCHEDULE_ENDPOINT = "/api/epm/w-locdslichthisvtheohocky"
 
 CLASS_TIME = {
     "1": "07:00:00",
