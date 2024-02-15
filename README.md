@@ -12,8 +12,6 @@ Automatically convert your school's hard-to-read schedule from the website into 
     - [Installation Steps](#installation-steps)
   - [Usage](#usage)
     - [Windows](#windows)
-  - [License](#license)
-  - [Acknowledgments](#acknowledgments)
 
 ## Project Description
 
@@ -23,9 +21,9 @@ Do you find your school's website schedule a headache to read? This project aims
 - This project is a work in progress.
 - Google Calendar API credentials and configurations are not included in this script.
 
-<!-- By now, `ScheduleToCalendar` supports below schools:
+By now, `ScheduleToCalendar` supports below schools:
 - SGU ([Saigon University](https://www.sgu.edu.vn/))
-- HUFLIT ([HCMC University of Foreign Languages - Information Technology](https://huflit.edu.vn/)) -->
+<!-- - HUFLIT ([HCMC University of Foreign Languages - Information Technology](https://huflit.edu.vn/)) -->
 
 ## Installation
 
@@ -56,10 +54,3 @@ In the project directory, run this command
 python .\main.py
 ```
 Then follow the prompts.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-Thanks to ChatGPT helped me create the README.md file.
