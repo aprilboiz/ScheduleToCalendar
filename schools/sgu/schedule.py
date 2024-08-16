@@ -75,6 +75,8 @@ class SGUSchedule(Schedule):
         return_data = []
         if not is_test:
             for subject in subject_data:
+                if not subject["thu"]:
+                    continue
                 return_data.append(
                     {
                         "code": subject["ma_mon"],
