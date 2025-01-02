@@ -1,3 +1,5 @@
+Previously, extracting schedule data was quite challenging. Since the system relied on server-side rendering, retrieving the data required considerable effort. However, thanks to the new API updates from my school, this process has become significantly easier.
+
 # ScheduleToCalendar
 
 Automatically convert your school's hard-to-read schedule from the website into your Google Calendar.
